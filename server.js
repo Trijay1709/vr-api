@@ -53,6 +53,7 @@ app.post("/updateVoltage", async (req, res) => {
   const { voltage } = req.body;
   if (voltage !== undefined && voltage >= 0 && voltage <= 255) {
     reftovoltage = voltage; // Store the reference voltage
+    res.json({ success: true, updatedData: redtovoltage });
   } else {
     res.status(400).json({
       success: false,
