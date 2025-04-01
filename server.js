@@ -66,7 +66,43 @@ app.post("/updateVoltage", async (req, res) => {
       .json({ success: false, error: "Invalid voltage (must be 0-255)" });
   }
 });
+// Endpoint to update voltage on ESP32 (Unity uses this)
+app.post("/updateVoltage", async (req, res) => {
+  const { voltage } = req.body;
+  if (voltage !== undefined && ESP_IP) {
+    let scaledVoltage = Math.round((voltage / 5) * 255);
+    scaledVoltage = Math.max(0, Math.min(255, scaledVoltage)); // Ensure within 0-255
 
+    try {
+      await axios.post(`http://${ESP_IP}/setVoltage`, { value: scaledVoltage });
+      res.json({
+        success: true,
+        message: "Voltage sent to ESP32",
+        scaledVoltage,
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, error: "Failed to reach ESP32" });
+    }
+  } else {
+    res
+      .status(400)
+      .json({
+        success: false,
+        error: "Invalid voltage input or ESP not connected",
+      });
+  }
+});
+
+// Endpoint for ESP32 to send its IP on startup
+app.post("/registerESP", (req, res) => {
+  const { ip } = req.body;
+  if (ip) {
+    ESP_IP = ip;
+    res.json({ success: true, message: `ESP32 registered with IP: ${ESP_IP}` });
+  } else {
+    res.status(400).json({ success: false, error: "Invalid ESP32 IP" });
+  }
+});
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server running at http://${IP}:${PORT}`);
