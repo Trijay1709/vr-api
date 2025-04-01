@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control VR Data</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 50px;
+        }
+
+        input,
+        button {
+            margin: 10px;
+            padding: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Control Data for Unity VR</h2>
+
+    <label for="voltage">Voltage (V):</label>
+    <input type="number" id="voltage" step="0.01" placeholder="Enter voltage">
+
+    <label for="current">Current (A):</label>
+    <input type="number" id="current" step="0.01" placeholder="Enter current">
+
+    <button onclick="updateData()">Update Data</button>
+
+    <h3>Current Data</h3>
+    <p id="currentData">Fetching...</p>
+
+    <script>
+        const apiUrl = "http://192.168.166.147:3000"; // Update if deployed
+
+        async function fetchData() {
+            const response = await fetch(`${apiUrl}/data`);
+            const data = await response.json();
+            document.getElementById("currentData").innerText =
+                `Voltage: ${data.voltage}V, Current: ${data.current}A, Time: ${new Date(data.time).toLocaleString()}`;
+        }
+
+        async function updateData() {
+            const voltage = parseFloat(document.getElementById("voltage").value);
+            const current = parseFloat(document.getElementById("current").value);
+
+            if (isNaN(voltage) || isNaN(current)) {
+                alert("Please enter valid numbers!");
+                return;
+            }
+
+            const response = await fetch(`${apiUrl}/update`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ voltage, current })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                fetchData(); // Refresh displayed data
+                alert("Data updated successfully!");
+            } else {
+                alert("Failed to update data.");
+            }
+        }
+
+        fetchData(); // Load initial data
+    </script>
+</body>
+
+</html>
