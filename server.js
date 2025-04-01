@@ -51,7 +51,7 @@ app.get("/getVoltage", (req, res) => {
 // Endpoint to update ref voltage(Unity uses this)
 app.post("/updateVoltage", async (req, res) => {
   const { voltage } = req.body;
-  if (voltage !== undefined && ESP_IP) {
+  if (voltage !== undefined && voltage >= 0 && voltage <= 255) {
     reftovoltage = voltage; // Store the reference voltage
   } else {
     res.status(400).json({
