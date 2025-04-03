@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voltage Display</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .voltage-box {
+            display: inline-block;
+            padding: 20px;
+            border: 2px solid #007BFF;
+            border-radius: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Voltage Reading</h1>
+    <div class="voltage-box">
+        Current Voltage: <strong>
+            <%= voltage %> V
+        </strong>
+    </div>
+</body>
+
+</html>
