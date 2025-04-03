@@ -47,6 +47,7 @@ app.post("/update", (req, res) => {
 
 // Get reference voltage for ESP
 app.get("/getVoltage", (req, res) => {
+  console.log("Reference voltage requested:", reftovoltage);
   res.json({ voltage: reftovoltage });
 });
 
