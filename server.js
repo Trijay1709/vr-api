@@ -47,13 +47,7 @@ app.post("/update", (req, res) => {
 
 // Get reference voltage for ESP
 app.get("/getVoltage", (req, res) => {
-  if (req.headers.accept && req.headers.accept.includes("application/json")) {
-    // If request is from an API client expecting JSON
-    res.json({ voltage: reftovoltage });
-  } else {
-    // Otherwise, render the EJS page
-    res.render("getvoltage", { voltage: reftovoltage });
-  }
+  res.json({ voltage: reftovoltage });
 });
 
 // Unity updates reference voltage
