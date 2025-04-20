@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const QuickChart = require("quickchart-js");
-
+const regression = require("regression");
 const app = express();
 const PORT = process.env.PORT || 3000;
 const IP = process.env.IP || "localhost";
