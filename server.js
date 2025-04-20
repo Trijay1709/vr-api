@@ -1,19 +1,19 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const { ChartJSNodeCanvas } = require("chartjs-node-canvas");
-const regression = require("regression");
+const QuickChart = require("quickchart-js");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const IP = process.env.IP || "192.168.166.147";
+const IP = process.env.IP || "localhost";
 
 app.use(cors());
 app.use(express.json());
 app.set("view engine", "ejs");
+
 let controlledData = {
   voltage: 120,
-  current: 0,
+  current: 10,
   resistance: 0,
   time: Date.now(),
 };
@@ -81,25 +81,20 @@ app.post("/clearReadings", (req, res) => {
   res.json({ success: true, message: "Readings cleared" });
 });
 
-// Generate and return V-I Graph
+// Generate and return V-I Graph using QuickChart
 app.get("/plotGraph", async (req, res) => {
   if (readings.length < 2) {
     return res.status(400).json({ error: "Not enough data points" });
   }
 
-  // Convert readings to regression format
-  let dataPoints = readings.map((r) => [r.current, r.voltage]);
-
   // Perform Linear Regression
+  const dataPoints = readings.map((r) => [r.current, r.voltage]);
   const result = regression.linear(dataPoints);
   const slope = result.equation[0]; // Resistance (R)
 
-  // Chart.js configuration
-  const width = 800;
-  const height = 600;
-  const chartJSNodeCanvas = new ChartJSNodeCanvas({ width, height });
-
-  const chartConfig = {
+  // Create the chart using QuickChart.js
+  const chart = new QuickChart();
+  chart.setConfig({
     type: "scatter",
     data: {
       datasets: [
@@ -132,14 +127,13 @@ app.get("/plotGraph", async (req, res) => {
         y: { title: { display: true, text: "Voltage (V)" } },
       },
     },
-  };
+  });
 
-  // Render graph
-  const imageBuffer = await chartJSNodeCanvas.renderToBuffer(chartConfig);
+  // Get the chart image URL
+  const imageUrl = chart.getUrl();
 
-  // Set response headers and send image
-  res.set("Content-Type", "image/png");
-  res.send(imageBuffer);
+  // Return the image URL in the response
+  res.json({ success: true, imageUrl });
 });
 
 // Start the server
