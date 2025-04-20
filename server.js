@@ -18,7 +18,7 @@ let controlledData = {
   time: Date.now(),
 };
 
-let reftovoltage = 0;
+let reftovoltage = 1200;
 let readings = []; // Stores [{ voltage, current }]
 
 // Update controlled data
@@ -54,7 +54,7 @@ app.get("/getVoltage", (req, res) => {
 // Unity updates reference voltage
 app.post("/updateVoltage", (req, res) => {
   const { voltage } = req.body;
-  if (voltage !== undefined && voltage >= 0 && voltage <= 255) {
+  if (voltage !== undefined && voltage >= 1000 && voltage <= 3000) {
     reftovoltage = voltage;
     res.json({ success: true, updatedData: reftovoltage });
   } else {
