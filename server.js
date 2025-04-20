@@ -54,7 +54,7 @@ app.get("/getVoltage", (req, res) => {
 // Unity updates reference voltage
 app.post("/updateVoltage", (req, res) => {
   const { voltage } = req.body;
-  if (voltage !== undefined && voltage >= 1000 && voltage <= 3000) {
+  if (voltage !== undefined && voltage >= 1000 && voltage <= 5000) {
     reftovoltage = voltage;
     res.json({ success: true, updatedData: reftovoltage });
   } else {
