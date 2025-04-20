@@ -23,6 +23,7 @@ let readings = []; // Stores [{ voltage, current }]
 
 // Update controlled data
 function updateControlledData(voltage, current) {
+  current = current / 1000;
   let resistance = current !== 0 ? voltage / current : 0;
   controlledData = { voltage, current, resistance, time: Date.now() };
 }
@@ -68,6 +69,7 @@ app.post("/updateVoltage", (req, res) => {
 app.post("/storeReading", (req, res) => {
   const { voltage, current } = req.body;
   if (voltage !== undefined && current !== undefined) {
+    current = current / 1000;
     readings.push({ voltage, current });
     res.json({ success: true, readings });
   } else {
