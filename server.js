@@ -1,41 +1,40 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const QuickChart = require("quickchart-js");
 const regression = require("regression");
+const axios = require("axios");
+
 const app = express();
 const PORT = process.env.PORT || 3000;
-const IP = process.env.IP || "localhost";
+const IP = process.env.IP || "0.0.0.0";
 
 app.use(cors());
 app.use(express.json());
-app.set("view engine", "ejs");
 
 let controlledData = {
   voltage: 120,
-  current: 10,
+  current: 0,
   resistance: 0,
   time: Date.now(),
 };
 
-let reftovoltage = 1200;
-let readings = []; // Stores [{ voltage, current }]
+let reftovoltage = 0;
+let readings = [];
 
-// Update controlled data
+// Helper to update controlled data
 function updateControlledData(voltage, current) {
-  current = current / 1000;
-  let resistance = current !== 0 ? voltage / current : 0;
+  const resistance = current !== 0 ? voltage / current : 0;
   controlledData = { voltage, current, resistance, time: Date.now() };
 }
 
 // --- API ENDPOINTS ---
 
-// Get current data (Unity fetches this)
+// Fetch controlled data (used by Unity)
 app.get("/data", (req, res) => {
   res.json(controlledData);
 });
 
-// ESP updates voltage & current
+// ESP posts voltage & current
 app.post("/update", (req, res) => {
   const { voltage, current } = req.body;
   if (voltage !== undefined && current !== undefined) {
@@ -48,14 +47,13 @@ app.post("/update", (req, res) => {
 
 // Get reference voltage for ESP
 app.get("/getVoltage", (req, res) => {
-  console.log("Reference voltage requested:", reftovoltage);
   res.json({ voltage: reftovoltage });
 });
 
 // Unity updates reference voltage
 app.post("/updateVoltage", (req, res) => {
   const { voltage } = req.body;
-  if (voltage !== undefined && voltage >= 1000 && voltage <= 5000) {
+  if (voltage !== undefined && voltage >= 0 && voltage <= 255) {
     reftovoltage = voltage;
     res.json({ success: true, updatedData: reftovoltage });
   } else {
@@ -63,15 +61,15 @@ app.post("/updateVoltage", (req, res) => {
   }
 });
 
-// --- GRAPH FUNCTIONALITY ---
-
-// Store new reading (Voltage & Current)
+// Store reading (Voltage & Current)
 app.post("/storeReading", (req, res) => {
   const { voltage, current } = req.body;
   if (voltage !== undefined && current !== undefined) {
-    current = current / 1000;
-    readings.push({ voltage, current });
-    res.json({ success: true, readings });
+    readings.push({
+      voltage: parseFloat(voltage),
+      current: parseFloat(current),
+    });
+    res.json({ success: true });
   } else {
     res.status(400).json({ success: false, error: "Invalid input" });
   }
@@ -83,62 +81,76 @@ app.post("/clearReadings", (req, res) => {
   res.json({ success: true, message: "Readings cleared" });
 });
 
-// Generate and return V-I Graph using QuickChart
+// Generate graph using QuickChart
 app.get("/plotGraph", async (req, res) => {
   if (readings.length < 2) {
     return res.status(400).json({ error: "Not enough data points" });
   }
 
-  // Perform Linear Regression
+  // Format for regression and scatter plot
   const dataPoints = readings.map((r) => [r.current, r.voltage]);
-  const result = regression.linear(dataPoints);
-  const slope = result.equation[0]; // Resistance (R)
+  const scatterPoints = readings.map(
+    (r) => `{ x: ${r.current}, y: ${r.voltage} }`
+  );
 
-  // Create the chart using QuickChart.js
-  const chart = new QuickChart();
-  chart.setConfig({
+  const result = regression.linear(dataPoints);
+  const slope = result.equation[0].toFixed(2);
+  const intercept = result.equation[1];
+
+  // Generate best-fit line points
+  const xMin = Math.min(...readings.map((r) => r.current));
+  const xMax = Math.max(...readings.map((r) => r.current));
+  const yMin = intercept + slope * xMin;
+  const yMax = intercept + slope * xMax;
+
+  const quickChartConfig = {
     type: "scatter",
     data: {
       datasets: [
         {
           label: "Voltage vs Current",
           data: readings.map((r) => ({ x: r.current, y: r.voltage })),
-          borderColor: "blue",
           backgroundColor: "blue",
-          showLine: false,
         },
         {
-          label: `Best Fit Line (R = ${slope.toFixed(2)} Ω)`,
+          label: `Fit Line (R = ${slope} Ω)`,
           data: [
-            { x: 0, y: result.equation[1] },
-            {
-              x: Math.max(...readings.map((r) => r.current)),
-              y: result.predict(Math.max(...readings.map((r) => r.current)))[1],
-            },
+            { x: xMin, y: yMin },
+            { x: xMax, y: yMax },
           ],
           borderColor: "red",
-          backgroundColor: "red",
-          showLine: true,
           fill: false,
+          showLine: true,
+          type: "line",
         },
       ],
     },
     options: {
       scales: {
-        x: { title: { display: true, text: "Current (A)" } },
-        y: { title: { display: true, text: "Voltage (V)" } },
+        x: {
+          title: { display: true, text: "Current (A)" },
+        },
+        y: {
+          title: { display: true, text: "Voltage (V)" },
+        },
       },
     },
-  });
+  };
 
-  // Get the chart image URL
-  const imageUrl = chart.getUrl();
+  const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(
+    JSON.stringify(quickChartConfig)
+  )}`;
 
-  // Return the image URL in the response
-  res.json({ success: true, imageUrl });
+  try {
+    const imageRes = await axios.get(chartUrl, { responseType: "arraybuffer" });
+    res.set("Content-Type", "image/png");
+    res.send(imageRes.data);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to generate graph" });
+  }
 });
 
-// Start the server
+// Start server
 app.listen(PORT, () => {
   console.log(`Server running at http://${IP}:${PORT}`);
 });
